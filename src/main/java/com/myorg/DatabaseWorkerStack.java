@@ -1,5 +1,6 @@
 package com.myorg;
 
+import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.RemovalPolicy;
 import software.constructs.Construct;
 import software.amazon.awscdk.Stack;
@@ -14,7 +15,7 @@ import java.util.List;
 public class DatabaseWorkerStack extends Stack {
 	private final String serviceName = "databaseWorker";
 	private final String logGroupName = serviceName + "LogGroup";
-	private final String containerImage = "nginx:stable-perl";
+	private final String containerImage = "nginx:latest";
 	
     public DatabaseWorkerStack(final Construct scope, final String id, Cluster cluster, Queue databaseQueue,
     		final String awsRegion) {
@@ -26,10 +27,13 @@ public class DatabaseWorkerStack extends Stack {
                 
         var databaseService = QueueProcessingFargateService.Builder.create(this, serviceName)
                 .cluster(cluster)
-                .cpu(512)
-                .memoryLimitMiB(256)
+                .cpu(256)
+                .memoryLimitMiB(512)
                 .image(ContainerImage.fromRegistry(containerImage))
                 .containerName(serviceName)
+                .minScalingCapacity(0)
+                .maxScalingCapacity(2)
+                .visibilityTimeout(Duration.seconds(30))
                 .capacityProviderStrategies(List.of(CapacityProviderStrategy.builder()
                         .capacityProvider("FARGATE_SPOT")
                         .weight(2)
@@ -46,6 +50,7 @@ public class DatabaseWorkerStack extends Stack {
                         .streamPrefix(serviceName)
                         .build()))
                 .environment(env)
+                .assignPublicIp(true)
                 .build();
 
         databaseQueue.grantConsumeMessages(databaseService.getTaskDefinition().getTaskRole());

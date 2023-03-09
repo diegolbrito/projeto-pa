@@ -1,5 +1,6 @@
 package com.myorg;
 
+import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.RemovalPolicy;
 import software.constructs.Construct;
 import software.amazon.awscdk.Stack;
@@ -16,7 +17,7 @@ import java.util.Map;
 public class AdesaoWorkerStack extends Stack {
 	private final String workerName = "adesaoWorker";
 	private final String logGroupName = workerName + "LogGroup";
-	private final String containerImage = "nginx:stable-perl";
+	private final String containerImage = "nginx:latest";
 	
     public AdesaoWorkerStack(final Construct scope, final String id, Cluster cluster, Queue adesaoQueue, 
     		Table adesaoTable, final String awsRegion) {
@@ -29,10 +30,13 @@ public class AdesaoWorkerStack extends Stack {
 
         var adesaoWorker = QueueProcessingFargateService.Builder.create(this, workerName)
                 .cluster(cluster)
-                .cpu(512)
-                .memoryLimitMiB(256)
+                .cpu(256)
+                .memoryLimitMiB(512)
                 .image(ContainerImage.fromRegistry(containerImage))
                 .containerName(workerName)
+                .minScalingCapacity(0)
+                .maxScalingCapacity(2)
+                .visibilityTimeout(Duration.seconds(30))
                 .capacityProviderStrategies(List.of(CapacityProviderStrategy.builder()
                         .capacityProvider("FARGATE_SPOT")
                         .weight(2)
@@ -49,6 +53,7 @@ public class AdesaoWorkerStack extends Stack {
                         .streamPrefix(workerName)
                         .build()))
                 .environment(env)
+                .assignPublicIp(true)
                 .build();
 
         adesaoQueue.grantConsumeMessages(adesaoWorker.getTaskDefinition().getTaskRole());

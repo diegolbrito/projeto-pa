@@ -16,8 +16,8 @@ import java.util.Map;
 public class AdesaoServiceStack extends Stack {
 	private final String serviceName = "adesaoService";
 	private final String logGroupName = serviceName + "LogGroup";
-	private final String containerImage = "siecola/curso_aws_project01:1.7.0";
-	private final int servicePort = 3000;
+	private final String containerImage = "nginx:latest";
+	private final int servicePort = 80;
 	
     public AdesaoServiceStack(final Construct scope, final String id, Cluster cluster, Queue adesaoQueue, 
     		final String awsRegion) {
@@ -30,15 +30,15 @@ public class AdesaoServiceStack extends Stack {
         var adesaoService = ApplicationLoadBalancedFargateService.Builder.create(this, "AlbPa01")
                 .serviceName(serviceName)
                 .cluster(cluster)
-                .cpu(512)
-                .memoryLimitMiB(256)
-                .desiredCount(2)
+                .cpu(256)
+                .memoryLimitMiB(512)
+                .desiredCount(1)
                 .listenerPort(servicePort)
                 .taskImageOptions(
                         ApplicationLoadBalancedTaskImageOptions.builder()
                                 .containerName(serviceName)
                                 .image(ContainerImage.fromRegistry(containerImage))
-                                .containerPort(3000)
+                                .containerPort(servicePort)
                                 .logDriver(LogDriver.awsLogs(AwsLogDriverProps.builder()
                                         .logGroup(LogGroup.Builder.create(this, logGroupName)
                                                 .logGroupName(logGroupName)
@@ -49,17 +49,18 @@ public class AdesaoServiceStack extends Stack {
                                 .environment(env)
                                 .build())
                 .publicLoadBalancer(true)
+                .assignPublicIp(true)
                 .build();
 
         adesaoService.getTargetGroup().configureHealthCheck(new HealthCheck.Builder()
-                .path("/actuator/health")
+                .path("/")
                 .port(Integer.toString(servicePort))
                 .healthyHttpCodes("200")
                 .build());
 
         ScalableTaskCount scalableTaskCount = adesaoService.getService().autoScaleTaskCount(EnableScalingProps.builder()
-                .minCapacity(2)
-                .maxCapacity(4)
+                .minCapacity(1)
+                .maxCapacity(2)
                 .build());
 
         scalableTaskCount.scaleOnCpuUtilization(serviceName + "AutoScaling", CpuUtilizationScalingProps.builder()

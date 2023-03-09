@@ -30,13 +30,7 @@ public class ProjetoPaStack extends Stack {
 		databaseFunction.addDependency(adesaoTable);
 		
 		var adesaoQueue = new AdesaoQueueStack(scope, "adesaoQueueStack");
-		
-		var adesaoService = new AdesaoServiceStack(scope, "adesaoServiceStack",
-				cluster.getCluster(), adesaoQueue.getQueue(), awsRegion);
-		adesaoService.addDependency(cluster);
-		adesaoService.addDependency(adesaoQueue);
-			
-
+					
 		var adesaoWorker = new AdesaoWorkerStack(scope, "adesaoWorkerStack", cluster.getCluster(), adesaoQueue.getQueue(), 
 				adesaoTable.getTable(), awsRegion);
 		adesaoWorker.addDependency(cluster);
@@ -47,5 +41,10 @@ public class ProjetoPaStack extends Stack {
 				databaseQueue.getQueue(), awsRegion);
 		databaseWorker.addDependency(cluster);
 		databaseWorker.addDependency(databaseQueue);
+		
+		var adesaoService = new AdesaoServiceStack(scope, "adesaoServiceStack",
+				cluster.getCluster(), adesaoQueue.getQueue(), awsRegion);
+		adesaoService.addDependency(cluster);
+		adesaoService.addDependency(adesaoQueue);
     }
 }
